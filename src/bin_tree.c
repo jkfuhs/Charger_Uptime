@@ -22,7 +22,7 @@ int getBalance(bin_tree N)
 
 
 // utility function to create a new node
-bin_tree new_node(uint32_t d1, uint32_t d2, bin_tree runtime, bin_tree uptime)
+bin_tree new_node(uint64_t d1, uint64_t d2, bin_tree runtime, bin_tree uptime)
 {
     bin_tree new_node = malloc(sizeof(struct bin_tree_node_st));
     if (!new_node)
@@ -77,7 +77,7 @@ bin_tree leftRotate(bin_tree x)
     return y;
 }
 
-bin_tree add_node(bin_tree head, uint32_t d1, uint32_t d2, bin_tree runtime, bin_tree uptime)
+bin_tree add_node(bin_tree head, uint64_t d1, uint64_t d2, bin_tree runtime, bin_tree uptime)
 {
     if (!head)
     {
@@ -130,6 +130,29 @@ bin_tree add_node(bin_tree head, uint32_t d1, uint32_t d2, bin_tree runtime, bin
 
 }
 
+bin_tree get_node(bin_tree head, uint64_t key)
+{
+    if (!head)
+    {
+        return NULL;
+    }
+    if (head->d1 == key)
+    {
+        return head;
+    }
+    if (key < head->d1)
+    {
+        return get_node(head->left, key);
+    }
+    if (key > head->d1)
+    {
+        return get_node(head->right, key);
+    }
+
+    // Should not get here, but a failsafe
+    return NULL;
+}
+
 void pre_print(bin_tree N)
 {
     if (!N)
@@ -137,6 +160,18 @@ void pre_print(bin_tree N)
         return;
     }
     pre_print(N->left);
-    printf("%d %d\n", N->d1, N->d2);
+    printf("%ld %ld\n", N->d1, N->d2);
     pre_print(N->right);
+}
+
+void free_tree(bin_tree tree)
+{
+    if (!tree)
+    {
+        return;
+    }
+    free_tree(tree->left);
+    free_tree(tree->right);
+    free(tree);
+    return;
 }

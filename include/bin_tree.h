@@ -8,8 +8,8 @@
 typedef struct bin_tree_node_st *bin_tree;
 struct bin_tree_node_st
 {
-    uint32_t d1;
-    uint32_t d2;
+    uint64_t d1;
+    uint64_t d2;
     bin_tree left;
     bin_tree right;
     uint32_t height;
@@ -17,7 +17,9 @@ struct bin_tree_node_st
     bin_tree uptime;
 };
 
-bin_tree add_node(bin_tree head, uint32_t d1, uint32_t d2, bin_tree runtime, bin_tree uptime);
+bin_tree add_node(bin_tree head, uint64_t d1, uint64_t d2, bin_tree runtime, bin_tree uptime);
 void pre_print(bin_tree N);
+void free_tree(bin_tree tree);
+bin_tree get_node(bin_tree head, uint64_t key);
 
 #endif

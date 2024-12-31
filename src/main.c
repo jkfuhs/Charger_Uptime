@@ -29,7 +29,11 @@ int main(int argc, char* argv[])
         exit(-1);
     }
     charger_tree = build_station_tree(input_file, &station_tree);
-    process_statuses(charger_tree, input_file);
-    pre_print(charger_tree);
+    process_statuses(charger_tree, station_tree, input_file);
+    fclose(input_file);
+
+    free_tree(charger_tree);
+    print_station_data(station_tree);
+    free_tree(station_tree);
     return 0;
 }

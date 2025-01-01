@@ -1,0 +1,1 @@
+./src/charger_uptime $1

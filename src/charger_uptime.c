@@ -137,7 +137,7 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
 
     if (!charger_tree)
     {
-        perror("No listed chargers");
+        perror("No listed chargers. Entry Ignored");
         return;
     }
     token = strtok(line, "\n ");
@@ -154,7 +154,7 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
     charger_node = get_node(charger_tree, charger);
     if (!charger_node)
     {
-        fprintf(stderr, "Charger %d does not exist\n", charger);
+        fprintf(stderr, "Charger %d does not exist. Entry Ignored\n", charger);
         return;
     }
 
@@ -162,7 +162,13 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
     station_node = get_node(station_tree, station);
     if (!station_node)
     {
-        fprintf(stderr, "Station %d does not exist\n", station);
+        fprintf(stderr, "Station %d does not exist. Entry Ignored\n", station);
+        return;
+    }
+
+    if (start_time > end_time)
+    {
+        perror("Start time greater than end time. Entry Ignored");
         return;
     }
 
@@ -245,6 +251,12 @@ LL_node tree_to_LL(bin_tree tree, LL_node *head, LL_node temp)
     if (!temp)
     {
         temp = new_LL_node(tree->d1, tree->d2, NULL);
+        if (!temp)
+        {
+            perror("New LL node failed");
+            printf("ERROR\n");
+            exit(-1);
+        }
     }
     if (!(*head))
     {
@@ -258,6 +270,12 @@ LL_node tree_to_LL(bin_tree tree, LL_node *head, LL_node temp)
     else
     {
         temp->next = new_LL_node(tree->d1, tree->d2, NULL);
+        if (!temp->next)
+        {
+            perror("new LL_node failed");
+            printf("ERROR\n");
+            exit(-1);
+        }
         temp = temp->next;
     }
     temp = tree_to_LL(tree->right, head, temp);

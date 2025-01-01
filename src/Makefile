@@ -23,3 +23,4 @@ charger_uptime: $(OBJ)
 
 clean:
 	rm -f $(ODIR)/*.o
+	rm -f ./charger_uptime

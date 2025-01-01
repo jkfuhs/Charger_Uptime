@@ -24,7 +24,6 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
     uint32_t station;
     uint32_t charger;
     bin_tree charger_tree = NULL;
-    bin_tree station_runtime, station_uptime;
 
     nread = getline(&str, &len, infile);
     if (nread == -1)
@@ -87,9 +86,7 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
         // extract charger IDs
         // printf("station: %d\n", station);
         charger = 0;
-        station_runtime = add_node(NULL, 0, 0, NULL, NULL);
-        station_uptime = add_node(NULL, 0, 0, NULL, NULL);
-        (*station_tree) = add_node(*station_tree, station, 0, station_runtime, station_uptime);
+        (*station_tree) = add_node(*station_tree, station, 0, NULL, NULL);
         while ((c = getc(infile)) != EOF)
         {
             // printf("charger c: %c\n", c);
@@ -107,7 +104,7 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
             // add charger to tree
             else if (c == ' ' || c == '\n' || c == '\t')
             {
-                charger_tree = add_node(charger_tree, charger, station, station_runtime, station_uptime);
+                charger_tree = add_node(charger_tree, charger, station, NULL, NULL);
                 charger = 0;
             }
             else 
@@ -140,6 +137,7 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
 
     if (!charger_tree)
     {
+        perror("No listed chargers");
         return;
     }
     token = strtok(line, "\n ");
@@ -296,11 +294,21 @@ void print_station_data(bin_tree station_tree)
     }
 
     print_station_data(station_tree->left);
-    tree_to_LL(station_tree->uptime, &uptimes_list, NULL);
-    free_tree(station_tree->uptime);
-    
-    total_runtime = station_tree->runtime->d2 - station_tree->runtime->d1;
-    free_tree(station_tree->runtime);
+    if (station_tree->uptime)
+    {
+        tree_to_LL(station_tree->uptime, &uptimes_list, NULL);
+        free_tree(station_tree->uptime);
+    }
+
+    if (station_tree->runtime)
+    {
+        total_runtime = station_tree->runtime->d2 - station_tree->runtime->d1;
+        free_tree(station_tree->runtime);
+    }
+    else 
+    {
+        total_runtime = 0;
+    }
     
     total_uptime = 0;
     temp = uptimes_list;

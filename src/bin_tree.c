@@ -81,7 +81,7 @@ bin_tree add_node(bin_tree head, uint64_t d1, uint64_t d2, bin_tree runtime, bin
 {
     if (!head)
     {
-        return new_node(d1, d2, NULL, NULL);
+        return new_node(d1, d2, runtime, uptime);
     }
     
     if (d1 < head->d1)

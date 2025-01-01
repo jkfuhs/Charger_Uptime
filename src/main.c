@@ -13,12 +13,14 @@ int main(int argc, char* argv[])
     if (argc != 2)
     {
         perror("incorrect number of arguments.\nExpected usage: ./charger_uptime input_file");
+        printf("ERROR\n");
         exit(-1);
     }
 
     if (strlen(argv[1]) > FILENAME_MAX)
     {
         perror("filename exceeds max filename");
+        printf("ERROR\n");
         exit(-1);
     }
 
@@ -26,6 +28,7 @@ int main(int argc, char* argv[])
     if (input_file == NULL)
     {
         perror("Error opening input file");
+        printf("ERROR\n");
         exit(-1);
     }
     charger_tree = build_station_tree(input_file, &station_tree);

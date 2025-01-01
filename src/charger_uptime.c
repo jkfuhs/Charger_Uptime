@@ -29,12 +29,14 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
     nread = getline(&str, &len, infile);
     if (nread == -1)
     {
-        perror("getline error");
+        perror("getline error. Expected: [Stations]");
+        printf("ERROR\n");
         exit(-1);
     }
     if (strcmp(str, "[Stations]\n"))
     {
         perror("input file format. Expected: [Stations]");
+        printf("ERROR\n");
         exit(-1);
     }
 
@@ -43,7 +45,7 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
 
     while ((c = getc(infile)) != EOF && c != '[')
     {
-        if (!(c >= '0' && c<= '9'))
+        if (c == '\n' || c == '\t' || c == ' ')
         {
             continue;
         }
@@ -52,31 +54,67 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
         {
             station = c - '0';
         }
+        else 
+        {
+            perror("file format error: expected Station ID");
+            printf("ERROR\n");
+            exit(-1);
+        }
         // extract station ID
         while ((c = getc(infile)) >= '0' && c <= '9')
         {
+            if (station > ((uint32_t)(-1)) / 10)
+            {
+                perror("Station ID must be unsigned 32-bit integer");
+                printf("ERROR\n");
+                exit(-1);
+            }
             station *= 10;
+            if (station > ((uint32_t)(-1)) - (c - '0'))
+            {
+                perror("Station ID must be unsigned 32-bit integer");
+                printf("ERROR\n");
+                exit(-1);
+            }
             station += c - '0';
+        }
+        if (c != '\n' && c != '\t' && c != ' ')
+        {
+            perror("file format error: expected Station ID or Charger ID");
+            printf("ERROR\n");
+            exit(-1);
         }
         // extract charger IDs
         // printf("station: %d\n", station);
         charger = 0;
         station_runtime = add_node(NULL, 0, 0, NULL, NULL);
         station_uptime = add_node(NULL, 0, 0, NULL, NULL);
-        *station_tree = add_node(*station_tree, station, 0, station_runtime, station_uptime);
+        (*station_tree) = add_node(*station_tree, station, 0, station_runtime, station_uptime);
         while ((c = getc(infile)) != EOF)
         {
             // printf("charger c: %c\n", c);
             if (c >= '0' && c <= '9')
             {
+                if (charger > (((uint32_t)(-1)) / 10) - (c - '0'))
+                {
+                    perror("Charger must be a 32-bit unsigned integer");
+                    printf("ERROR\n");
+                    exit(-1);
+                }
                 charger *= 10;
                 charger += c - '0';
             }
             // add charger to tree
-            else
+            else if (c == ' ' || c == '\n' || c == '\t')
             {
                 charger_tree = add_node(charger_tree, charger, station, station_runtime, station_uptime);
                 charger = 0;
+            }
+            else 
+            {
+                perror("expected Station ID or whitespace deliminator");
+                printf("ERROR\n");
+                exit(-1);
             }
             if (c == '\n')
             {
@@ -146,7 +184,8 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
     }
     else if (strcmp(token, "false") != 0)
     {
-        perror("something went wrong. up != true/false");
+        perror("file format error: expected \"true/false\"");
+        printf("ERROR\n");
         exit(-1);
     }
 }
@@ -162,11 +201,13 @@ void process_statuses(bin_tree charger_tree, bin_tree station_tree, FILE *infile
     if (nread == -1)
     {
         perror("[Charger Availability Reports] read error");
+        printf("ERROR\n");
         exit(-1);
     }
     if (strcmp(str, "Charger Availability Reports]\n"))
     {
-        perror("input file format: missing [Charger Availability Reports] header");
+        perror("input file format: expected [Charger Availability Reports] header");
+        printf("ERROR\n");
         exit(-1);
     }
     // parse statuses
@@ -270,8 +311,15 @@ void print_station_data(bin_tree station_tree)
     }
     free_LL(uptimes_list);
     
-    percentage = (100 * total_uptime) / total_runtime;
-    printf("%ld %ld\n", station_tree->d1, percentage);
+    if (total_runtime > 0)
+    {
+        percentage = (100 * total_uptime) / total_runtime;
+        printf("%ld %ld\n", station_tree->d1, percentage);
+    }
+    else
+    {
+        printf("%ld No Data\n", station_tree->d1);
+    }
 
     print_station_data(station_tree->right);
     return;

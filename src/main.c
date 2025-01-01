@@ -31,11 +31,19 @@ int main(int argc, char* argv[])
         printf("ERROR\n");
         exit(-1);
     }
+
+    /* First, build a binary tree mapping chargers to stations
+     * and a second tree mapping stations to their uptime. */
     charger_tree = build_station_tree(input_file, &station_tree);
+
+    /* Next, iterate through the list of availability reports
+     * and update uptime and runtime appropriately */
     process_statuses(charger_tree, station_tree, input_file);
     fclose(input_file);
-
     free_tree(charger_tree);
+
+    /* Finally, iterate through stations in ascending order
+     * and consolidate, format and print uptime data*/
     print_station_data(station_tree);
     free_tree(station_tree);
     return 0;

@@ -1,0 +1,15 @@
+Project: charger_uptime
+Author: Jasper Fuhs
+Date: 1/1/2025
+
+Compiling and Run instructions:
+- To compile, run './Compile.sh'
+- To run, run './Run.sh INPUT_TEXT_FILE.txt'
+
+Considerations:
+    Most invalid input files will return errors. However some input files
+    may have inconsequential errors that will be ignored and be processed
+    as normal. (such as extra whitespace)
+
+    If an invalid input is detected but does not prohibit the program from running
+    a message will print to stderr and the program will continue running as usual.

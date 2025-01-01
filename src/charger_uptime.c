@@ -4,17 +4,24 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
+// helper function to find min of uint64_t values
 uint64_t min64(uint64_t a, uint64_t b)
 {
     return a < b ? a : b;
 }
 
+// helper function to find max of uint64_t values
 uint64_t max64(uint64_t a, uint64_t b)
 {
     return a > b ? a : b;
 }
 
-
+/* function to build a binary tree mapping stations to uptime and runtime
+ * and a binary tree mapping chargers to stations. Updates station tree
+ * by reference.
+ * Returns: binary tree mapping chargers to stations
+ * Params:  a filestream and a binary tree pointer for the station tree
+ */
 bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
 {
     char *str = NULL;
@@ -24,7 +31,9 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
     uint32_t station;
     uint32_t charger;
     bin_tree charger_tree = NULL;
+    bin_tree node;
 
+    // read the first line of the file to check headers
     nread = getline(&str, &len, infile);
     if (nread == -1)
     {
@@ -42,6 +51,8 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
     if (str)
         free(str);
 
+    // read Station IDs and Charger IDs character by character to
+    //    check for format errors.
     while ((c = getc(infile)) != EOF && c != '[')
     {
         if (c == '\n' || c == '\t' || c == ' ')
@@ -84,12 +95,15 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
             exit(-1);
         }
         // extract charger IDs
-        // printf("station: %d\n", station);
         charger = 0;
-        (*station_tree) = add_node(*station_tree, station, 0, NULL, NULL);
+
+        // add station to tree unless it already exists
+        if (get_node(*station_tree, station) == NULL)
+        {
+            (*station_tree) = add_node(*station_tree, station, 0, NULL, NULL);
+        }
         while ((c = getc(infile)) != EOF)
         {
-            // printf("charger c: %c\n", c);
             if (c >= '0' && c <= '9')
             {
                 if (charger > (((uint32_t)(-1)) / 10) - (c - '0'))
@@ -104,8 +118,22 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
             // add charger to tree
             else if (c == ' ' || c == '\n' || c == '\t')
             {
-                charger_tree = add_node(charger_tree, charger, station, NULL, NULL);
-                charger = 0;
+                // If the charger already exists under a different station, error and exit.
+                if ((node = get_node(charger_tree, charger)) && node->d2 != station)
+                {
+                    if (node->d2 != station)
+                    {
+                        fprintf(stderr, "Charger %d listed twice under stations %d, %ld\n", charger, station, node->d2);
+                        printf("ERROR\n");
+                        exit(-1);
+                    }
+                }
+                else 
+                {
+                    // Add the charger to the tree
+                    charger_tree = add_node(charger_tree, charger, station, NULL, NULL);
+                    charger = 0;
+                }
             }
             else 
             {
@@ -124,6 +152,7 @@ bin_tree build_station_tree(FILE *infile, bin_tree *station_tree)
     return charger_tree;
 }
 
+// Parses a line from the [Charger Availability Reports]
 void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
 {
     uint32_t charger;
@@ -140,6 +169,8 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
         perror("No listed chargers. Entry Ignored");
         return;
     }
+
+    // get data from line
     token = strtok(line, "\n ");
     charger = atol(token);
 
@@ -172,6 +203,7 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
         return;
     }
 
+    // update start and end runtimes
     if (!station_node->runtime)
     {
         station_node->runtime = add_node(station_node->runtime, start_time, end_time, NULL, NULL);
@@ -182,6 +214,7 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
         station_node->runtime->d2 = max64(station_node->runtime->d2, end_time);
     }
 
+    // check true/false value
     if (strcmp(token, "true") == 0)
     {
         station_node->uptime = add_node(station_node->uptime, start_time, end_time, NULL, NULL);
@@ -194,6 +227,7 @@ void parse_status(bin_tree charger_tree, bin_tree station_tree, char* line)
     }
 }
 
+// read [Charger Availability Reports] line by line
 void process_statuses(bin_tree charger_tree, bin_tree station_tree, FILE *infile)
 {
     char *str = NULL;
@@ -225,6 +259,7 @@ void process_statuses(bin_tree charger_tree, bin_tree station_tree, FILE *infile
     }
 }
 
+// helper function to create a Linked List node
 LL_node new_LL_node(uint64_t start, uint64_t end, LL_node next)
 {
     LL_node N;
@@ -240,6 +275,8 @@ LL_node new_LL_node(uint64_t start, uint64_t end, LL_node next)
     return N; 
 }
 
+// helper function to convert a sorted binary tree storing times
+// to a linked list with overlapping times removed
 LL_node tree_to_LL(bin_tree tree, LL_node *head, LL_node temp)
 {
     if (!tree)
@@ -282,6 +319,7 @@ LL_node tree_to_LL(bin_tree tree, LL_node *head, LL_node temp)
     return temp;
 }
 
+// helper function to free a Linked List
 void free_LL(LL_node L)
 {
     LL_node temp;
@@ -299,6 +337,10 @@ void free_LL(LL_node L)
     return;
 }
 
+/* Recursively iterates through binary tree of stations in ascending order and 
+ * calculates uptime and runtime, then prints relevant data to stdout.
+ Returns: void
+ Params:  A binary tree storing station IDs and uptime/runtime data */
 void print_station_data(bin_tree station_tree)
 {
     LL_node uptimes_list = NULL;
@@ -306,11 +348,13 @@ void print_station_data(bin_tree station_tree)
     uint64_t total_runtime;
     uint64_t total_uptime;
     uint64_t percentage;
+
     if (!station_tree)
     {
         return;
     }
 
+    // recurse left
     print_station_data(station_tree->left);
     if (station_tree->uptime)
     {
@@ -347,6 +391,7 @@ void print_station_data(bin_tree station_tree)
         printf("%ld No Data\n", station_tree->d1);
     }
 
+    // recurse right
     print_station_data(station_tree->right);
     return;
 }
